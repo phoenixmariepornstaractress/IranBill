@@ -1,77 +1,121 @@
 <!doctype html>
-<html lang="en">
+<html lang="fa">
 <head>
-	<meta charset="UTF-8">
-	<script src="../Iranbill.js" ></script>
-	<title>تست پرداخت قبض</title>
-	<script>
-		function get_type_name(type) {
-			switch (type){
-				case "1":
-					return "آب";
-					break;
-				case "2":
-					return "برق";
-					break;
-				case "3":
-					return "گاز";
-					break;
-				case "4":
-					return "تلفن ثابت";
-					break;
-				case "5":
-					return "موبایل";
-					break;
-				case "6":
-					return "شهرداری";
-					break;
-			}
-			return "";
-		}
-		function get_bill(){
-			var bill_number = document.getElementById("bill_number").value;
-			var payment_id = document.getElementById("payment_id").value;
-			if(bill_number.length > 12 && payment_id.length > 6){
-				var out = IranBill(bill_number,payment_id);
-				//If Bill Not Valid
-				if(out[0] == -1){
-					alert("شماره قبض نامعتبر است");
-				}else if(out[0] == -2){
-				//if Payment Id not Valid
-					alert("شناسه ی پرداخت نامعتبر است");
-				}else{
-					//IF Bill Is Valid
-					document.getElementById("result").innerHTML =
-							"قبض " + get_type_name(out[3]) +
-									" به مبلغ: "+out[2]+" ریال";
-				}
-			}
-		}
-	</script>
-	<style>
-		body{
-			font-family: sans-serif,tahoma,arial;
-		}
-		.container{
-			width:200px;
-			margin:0 auto;
-			text-align: center;
-		}
-		input{
-			margin-top:15px;
-			padding:3px;
-			width: 100%;
-			height: 16px;
-			font-family: sans-serif,tahoma,arial;
-		}
-	</style>
+  <meta charset="UTF-8">
+  <title>تست پرداخت قبض</title>
+  <style>
+    body {
+      font-family: Tahoma, Arial, sans-serif;
+      background-color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 280px;
+      text-align: center;
+    }
+    input {
+      margin-top: 10px;
+      padding: 8px;
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    #result {
+      margin-top: 15px;
+      font-weight: bold;
+      color: #333;
+    }
+  </style>
+  <script>
+    function IranBill(billNumber, paymentId) {
+      const WEIGHTS = [2, 3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 7, 2, 3];
+
+      if (typeof billNumber !== 'string' || billNumber.length !== 13) return [-1];
+      if (typeof paymentId !== 'string' || paymentId.length < 7) return [-2];
+
+      const paddedPaymentId = paymentId.padStart(13, '0');
+
+      const billDigits = [...billNumber].map(Number);
+      const paymentDigits = [...paddedPaymentId].map(Number);
+
+      const type = billDigits[11];
+
+      const reverse = arr => [...arr].reverse();
+
+      const calculateChecksum = (digits, offset, length) => {
+        let sum = 0;
+        for (let i = 0; i < length; i++) {
+          sum += digits[i + offset] * WEIGHTS[i];
+        }
+        const mod = 11 - (sum % 11);
+        return mod > 9 ? 0 : mod;
+      };
+
+      const reversedBill = reverse(billDigits);
+      const reversedPayment = reverse(paymentDigits);
+
+      if (calculateChecksum(reversedBill, 1, 12) !== reversedBill[0]) return [-1];
+      if (calculateChecksum(reversedPayment, 2, 11) !== reversedPayment[1]) return [-2];
+
+      const finalDigits = [...billNumber + paddedPaymentId.slice(5, 12)].map(Number).reverse();
+      if (calculateChecksum(finalDigits, 0, 20) !== reversedPayment[0]) return [-2];
+
+      const fee = parseInt(paddedPaymentId.slice(0, 8), 10) * 1000;
+      if (fee === 0) return [-2];
+
+      return [billNumber, paddedPaymentId, fee, type];
+    }
+
+    function get_type_name(type) {
+      const types = {
+        "1": "آب",
+        "2": "برق",
+        "3": "گاز",
+        "4": "تلفن ثابت",
+        "5": "موبایل",
+        "6": "شهرداری"
+      };
+      return types[type] || "";
+    }
+
+    function get_bill() {
+      const bill_number = document.getElementById("bill_number").value;
+      const payment_id = document.getElementById("payment_id").value;
+
+      if (bill_number.length > 12 && payment_id.length > 6) {
+        const out = IranBill(bill_number, payment_id);
+
+        const resultEl = document.getElementById("result");
+        if (out[0] === -1) {
+          resultEl.textContent = "شماره قبض نامعتبر است";
+          resultEl.style.color = "red";
+        } else if (out[0] === -2) {
+          resultEl.textContent = "شناسه ی پرداخت نامعتبر است";
+          resultEl.style.color = "red";
+        } else {
+          resultEl.textContent = `قبض ${get_type_name(out[3])} به مبلغ: ${out[2]} ریال`;
+          resultEl.style.color = "green";
+        }
+      }
+    }
+  </script>
 </head>
 <body>
-	<div class="container">
-		<input onchange="get_bill()" maxlength="13" id="bill_number" placeholder="شماره قبض" ><br>
-		<input onchange="get_bill()" maxlength="13" id="payment_id" placeholder="شناسه پرداخت" >
-		<br><br>
-		<div id="result"></div>
-	</div>
+  <div class="container">
+    <h3>بررسی قبض</h3>
+    <input onchange="get_bill()" maxlength="13" id="bill_number" placeholder="شماره قبض">
+    <input onchange="get_bill()" maxlength="13" id="payment_id" placeholder="شناسه پرداخت">
+    <div id="result"></div>
+  </div>
 </body>
 </html>
+ 
