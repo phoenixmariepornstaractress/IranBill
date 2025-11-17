@@ -1,121 +1,407 @@
 <!doctype html>
-<html lang="fa">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>تست پرداخت قبض</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Iran Bill Validator</title>
+
+  <meta name="description"
+        content="Validate Iranian bill numbers and payment IDs — check padded payment ID, fee amount, and bill type instantly." />
+
   <style>
-    body {
-      font-family: Tahoma, Arial, sans-serif;
-      background-color: #f5f5f5;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+    :root {
+      --bg:#f6f9fc;
+      --card:#ffffff;
+      --muted:#6b7280;
+      --accent:#0f62fe;
+      --danger:#ef4444;
+      --radius:12px;
+      --max-width:720px;
+      --glass: rgba(15,98,254,0.06);
     }
-    .container {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      width: 280px;
-      text-align: center;
+
+    html,body {
+      height:100%;
+      margin:0;
+      font-family: Inter, ui-sans-serif, system-ui;
+      background: linear-gradient(180deg, var(--bg), #eef4ff 60%);
+      color:#0f172a;
+      -webkit-font-smoothing:antialiased;
     }
-    input {
-      margin-top: 10px;
-      padding: 8px;
-      width: 100%;
-      box-sizing: border-box;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 14px;
+
+    .wrap {
+      max-width:var(--max-width);
+      margin:48px auto;
+      padding:24px;
     }
-    #result {
-      margin-top: 15px;
-      font-weight: bold;
-      color: #333;
+
+    header {
+      display:flex;
+      align-items:center;
+      gap:16px;
+      margin-bottom:20px;
+    }
+
+    .logo {
+      width:56px;height:56px;
+      border-radius:10px;
+      background:var(--glass);
+      display:flex;align-items:center;justify-content:center;
+      font-weight:700;
+      color:var(--accent);
+      box-shadow:0 6px 18px rgba(15,98,254,0.08);
+      flex:0 0 56px;
+    }
+
+    h1 { margin:0; font-size:1.25rem; }
+    p.lead { margin:4px 0 0; color:var(--muted); font-size:0.95rem; }
+
+    main.card {
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:22px;
+      box-shadow:0 8px 30px rgba(10,14,28,0.06);
+      margin-top:18px;
+    }
+
+    form.grid {
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+    }
+
+    @media (max-width:640px) {
+      form.grid { grid-template-columns:1fr; }
+    }
+
+    label {
+      display:block;
+      font-size:0.85rem;
+      color:var(--muted);
+      margin-bottom:6px;
+    }
+
+    input[type="text"] {
+      width:100%;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid #e6eef8;
+      background:transparent;
+      font-size:1rem;
+      transition:border-color .12s, box-shadow .12s;
+    }
+    input[type="text"]:focus {
+      outline:none;
+      border-color:var(--accent);
+      box-shadow:0 6px 18px rgba(15,98,254,0.08);
+    }
+
+    .actions {
+      display:flex;
+      gap:8px;
+      justify-content:flex-end;
+    }
+
+    button {
+      padding:10px 14px;
+      border-radius:10px;
+      border:0;
+      cursor:pointer;
+      font-weight:600;
+      font-size:0.95rem;
+      background:var(--accent);
+      color:white;
+      box-shadow:0 6px 18px rgba(15,98,254,0.12);
+      transition:opacity .15s;
+    }
+    button:hover { opacity:.9; }
+
+    button.secondary {
+      background:transparent;
+      color:var(--accent);
+      border:1px solid rgba(15,98,254,0.18);
+      box-shadow:none;
+    }
+
+    .result {
+      margin-top:18px;
+      padding:14px;
+      border-radius:10px;
+      background:white;
+      border:1px solid #edf5ff;
+      display:flex;
+      gap:12px;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+
+    .muted { color:var(--muted); font-size:0.9rem; margin-bottom:6px; }
+    .big { font-size:1.05rem; font-weight:700; }
+
+    .chips { display:flex; gap:8px; flex-wrap:wrap; }
+    .chip {
+      padding:8px 10px;
+      border-radius:999px;
+      background:#f1f8ff;
+      color:var(--accent);
+      font-weight:600;
+      font-size:0.9rem;
+    }
+
+    .error {
+      margin-top:12px;
+      color:var(--danger);
+      font-weight:600;
+    }
+
+    footer {
+      margin-top:18px;
+      color:var(--muted);
+      font-size:0.85rem;
+      display:flex;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+
+    .sr-only {
+      position:absolute!important;
+      height:1px;width:1px;overflow:hidden;
+      clip:rect(1px,1px,1px,1px);
+      white-space:nowrap;
     }
   </style>
-  <script>
-    function IranBill(billNumber, paymentId) {
-      const WEIGHTS = [2, 3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 7, 2, 3];
-
-      if (typeof billNumber !== 'string' || billNumber.length !== 13) return [-1];
-      if (typeof paymentId !== 'string' || paymentId.length < 7) return [-2];
-
-      const paddedPaymentId = paymentId.padStart(13, '0');
-
-      const billDigits = [...billNumber].map(Number);
-      const paymentDigits = [...paddedPaymentId].map(Number);
-
-      const type = billDigits[11];
-
-      const reverse = arr => [...arr].reverse();
-
-      const calculateChecksum = (digits, offset, length) => {
-        let sum = 0;
-        for (let i = 0; i < length; i++) {
-          sum += digits[i + offset] * WEIGHTS[i];
-        }
-        const mod = 11 - (sum % 11);
-        return mod > 9 ? 0 : mod;
-      };
-
-      const reversedBill = reverse(billDigits);
-      const reversedPayment = reverse(paymentDigits);
-
-      if (calculateChecksum(reversedBill, 1, 12) !== reversedBill[0]) return [-1];
-      if (calculateChecksum(reversedPayment, 2, 11) !== reversedPayment[1]) return [-2];
-
-      const finalDigits = [...billNumber + paddedPaymentId.slice(5, 12)].map(Number).reverse();
-      if (calculateChecksum(finalDigits, 0, 20) !== reversedPayment[0]) return [-2];
-
-      const fee = parseInt(paddedPaymentId.slice(0, 8), 10) * 1000;
-      if (fee === 0) return [-2];
-
-      return [billNumber, paddedPaymentId, fee, type];
-    }
-
-    function get_type_name(type) {
-      const types = {
-        "1": "آب",
-        "2": "برق",
-        "3": "گاز",
-        "4": "تلفن ثابت",
-        "5": "موبایل",
-        "6": "شهرداری"
-      };
-      return types[type] || "";
-    }
-
-    function get_bill() {
-      const bill_number = document.getElementById("bill_number").value;
-      const payment_id = document.getElementById("payment_id").value;
-
-      if (bill_number.length > 12 && payment_id.length > 6) {
-        const out = IranBill(bill_number, payment_id);
-
-        const resultEl = document.getElementById("result");
-        if (out[0] === -1) {
-          resultEl.textContent = "شماره قبض نامعتبر است";
-          resultEl.style.color = "red";
-        } else if (out[0] === -2) {
-          resultEl.textContent = "شناسه ی پرداخت نامعتبر است";
-          resultEl.style.color = "red";
-        } else {
-          resultEl.textContent = `قبض ${get_type_name(out[3])} به مبلغ: ${out[2]} ریال`;
-          resultEl.style.color = "green";
-        }
-      }
-    }
-  </script>
 </head>
+
 <body>
-  <div class="container">
-    <h3>بررسی قبض</h3>
-    <input onchange="get_bill()" maxlength="13" id="bill_number" placeholder="شماره قبض">
-    <input onchange="get_bill()" maxlength="13" id="payment_id" placeholder="شناسه پرداخت">
-    <div id="result"></div>
-  </div>
+<div class="wrap">
+  <header>
+    <div class="logo">IB</div>
+    <div>
+      <h1>Iran Bill Validator</h1>
+      <p class="lead">Validate bill numbers & payment IDs — see padded ID, fee, and bill type instantly.</p>
+    </div>
+  </header>
+
+  <main class="card" role="main" aria-labelledby="main-heading">
+    <h2 id="main-heading" class="sr-only">Iran Bill Validation Form</h2>
+
+    <form id="validatorForm" class="grid" novalidate>
+      <fieldset style="border:0;padding:0;margin:0;display:contents;">
+        <div>
+          <label for="billNumber">Bill number (13 digits)</label>
+          <input id="billNumber" name="billNumber" inputmode="numeric"
+                 autocomplete="off" spellcheck="false"
+                 maxlength="13" placeholder="0123456789012" required />
+        </div>
+
+        <div>
+          <label for="paymentId">Payment ID (7–13 digits)</label>
+          <input id="paymentId" name="paymentId" inputmode="numeric"
+                 autocomplete="off" spellcheck="false"
+                 maxlength="13" placeholder="1234567" required />
+        </div>
+
+        <div style="grid-column:1/-1">
+          <div class="actions">
+            <button type="submit">Validate</button>
+            <button type="button" class="secondary" id="resetBtn">Reset</button>
+          </div>
+        </div>
+      </fieldset>
+    </form>
+
+    <div id="feedback" aria-live="polite" class="muted" style="margin-top:10px"></div>
+
+    <div id="resultCard" class="result" style="display:none;">
+      <div>
+        <div class="muted">Bill number</div>
+        <div id="outBill" class="big">—</div>
+
+        <div class="muted" style="margin-top:8px">Payment ID (padded)</div>
+        <div id="outPayment" style="font-weight:600">—</div>
+      </div>
+
+      <div style="text-align:right">
+        <div class="muted">Fee</div>
+        <div id="outFee" class="big">—</div>
+
+        <div class="chips" style="margin-top:8px">
+          <div class="chip" id="outType">Type —</div>
+          <button id="copyBtn" class="secondary" aria-label="Copy result text">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="errorBox" class="error" role="alert" style="display:none;"></div>
+
+    <p class="help muted" style="margin-top:14px">
+      Bill type codes:
+      <strong>1</strong> آب,
+      <strong>2</strong> برق,
+      <strong>3</strong> گاز,
+      <strong>4</strong> تلفن ثابت,
+      <strong>5</strong> موبایل,
+      <strong>6</strong> شهرداری
+    </p>
+
+    <footer>
+      <div class="small">Runs fully client-side — no data sent anywhere.</div>
+      <div class="small">MIT License</div>
+    </footer>
+  </main>
+</div>
+
+<script>
+/* ————————————— VALIDATOR LOGIC ————————————— */
+function IranBill(billNumber, paymentId) {
+  const BILL_LENGTH = 13;
+  const MIN_PAYMENT_ID = 7;
+
+  const ERR_BILL = [-1];
+  const ERR_PAYMENT = [-2];
+
+  const WEIGHTS = [
+    2,3,4,5,6,7, 2,3,4,5,6,7,
+    2,3,4,5,6,7, 2,3,4,5,6,7,
+    2,3
+  ];
+
+  if (!/^\d{13}$/.test(billNumber)) return ERR_BILL;
+  if (!/^\d{7,13}$/.test(paymentId)) return ERR_PAYMENT;
+
+  const paddedPaymentId = paymentId.padStart(BILL_LENGTH, "0");
+  const billDigits = [...billNumber].map(Number);
+  const paymentDigits = [...paddedPaymentId].map(Number);
+  const last = BILL_LENGTH - 1;
+
+  const type = billDigits[11];
+
+  const checksum = (digits, reverseIndex, start, length) => {
+    let sum = 0;
+    for (let i = 0; i < length; i++) {
+      sum += digits[reverseIndex - (start + i)] * WEIGHTS[i];
+    }
+    const mod = 11 - (sum % 11);
+    return mod > 9 ? 0 : mod;
+  };
+
+  if (checksum(billDigits, last, 1, 12) !== billDigits[last]) return ERR_BILL;
+  if (checksum(paymentDigits, last, 2, 11) !== paymentDigits[last - 1]) return ERR_PAYMENT;
+
+  const combinedDigits = [...(billNumber + paddedPaymentId.slice(5, 12))].map(Number);
+  if (checksum(combinedDigits, combinedDigits.length - 1, 0, 20) !== paymentDigits[last]) {
+    return ERR_PAYMENT;
+  }
+
+  const fee = Number(paddedPaymentId.slice(0, 8)) * 1000;
+  if (!fee) return ERR_PAYMENT;
+
+  return [billNumber, paddedPaymentId, fee, type];
+}
+
+/* ————————————— UI LOGIC ————————————— */
+const form = document.getElementById("validatorForm");
+const billInput = document.getElementById("billNumber");
+const paymentInput = document.getElementById("paymentId");
+
+const resultCard = document.getElementById("resultCard");
+const outBill = document.getElementById("outBill");
+const outPayment = document.getElementById("outPayment");
+const outFee = document.getElementById("outFee");
+const outType = document.getElementById("outType");
+
+const errorBox = document.getElementById("errorBox");
+const feedback = document.getElementById("feedback");
+
+const copyBtn = document.getElementById("copyBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+const TYPE_LABELS = {
+  1: "آب (Water)",
+  2: "برق (Electricity)",
+  3: "گاز (Gas)",
+  4: "تلفن ثابت (Landline)",
+  5: "موبایل (Mobile)",
+  6: "شهرداری (Municipality)"
+};
+
+const toCurrency = (n) =>
+  n.toLocaleString("en-US") + " ریال";
+
+const showError = (msg) => {
+  errorBox.style.display = "block";
+  errorBox.textContent = msg;
+  resultCard.style.display = "none";
+  feedback.textContent = "";
+};
+
+const clearError = () => {
+  errorBox.style.display = "none";
+  errorBox.textContent = "";
+};
+
+const showResult = ([bill, pay, fee, type]) => {
+  outBill.textContent = bill;
+  outPayment.textContent = pay;
+  outFee.textContent = toCurrency(fee);
+  outType.textContent = TYPE_LABELS[type] || ("Type " + type);
+
+  resultCard.style.display = "flex";
+  feedback.textContent = "Validation successful";
+};
+
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+  clearError();
+  resultCard.style.display = "none";
+
+  const bill = billInput.value.trim();
+  const pay = paymentInput.value.trim();
+
+  if (!/^\d{13}$/.test(bill)) {
+    showError("Bill number must be exactly 13 digits.");
+    billInput.focus();
+    return;
+  }
+  if (!/^\d{7,13}$/.test(pay)) {
+    showError("Payment ID must be 7 to 13 digits.");
+    paymentInput.focus();
+    return;
+  }
+
+  const res = IranBill(bill, pay);
+  if (res[0] === -1) return showError("Invalid bill number (checksum failed).");
+  if (res[0] === -2) return showError("Invalid payment ID (checksum/fee failed).");
+
+  showResult(res);
+});
+
+resetBtn.addEventListener("click", () => {
+  form.reset();
+  clearError();
+  resultCard.style.display = "none";
+  feedback.textContent = "";
+  billInput.focus();
+});
+
+copyBtn.addEventListener("click", async () => {
+  const text = `
+Bill: ${outBill.textContent}
+Payment ID: ${outPayment.textContent}
+Fee: ${outFee.textContent}
+Type: ${outType.textContent}
+`.trim();
+
+  try {
+    await navigator.clipboard.writeText(text);
+    copyBtn.textContent = "Copied";
+  } catch {
+    copyBtn.textContent = "Copy failed";
+  }
+
+  setTimeout(() => (copyBtn.textContent = "Copy"), 1600);
+});
+</script>
 </body>
 </html>
- 
